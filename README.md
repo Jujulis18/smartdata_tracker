@@ -2,7 +2,7 @@
 
 ## Objectif du Projet
 
-L'objectif de SmartData Tracker est de fournir une solution innovante pour aider les entreprises à rester informées des dernières tendances et développements dans leur domaine. En automatisant le processus de veille, cet outil permet aux entreprises de gagner du temps et des ressources, tout en améliorant leur prise de décision et leur avantage concurrentiel.
+SmartData Tracker vise à automatiser le processus de veille sur des sites web, en extrayant des articles et en les organisant par catégories. Cela permet aux entreprises de rester informées des dernières tendances et développements dans leur domaine, sans avoir à consacrer du temps à la recherche manuelle.
 
 ## Valeur Ajoutée
 
@@ -13,27 +13,25 @@ L'objectif de SmartData Tracker est de fournir une solution innovante pour aider
 
 ## Table des Matières
 
-- [Introduction](#introduction)
 - [Fonctionnalités](#fonctionnalités)
 - [Architecture du Projet](#architecture-du-projet)
-
-## Introduction
-
-SmartData Tracker vise à automatiser le processus de veille sur des sites web, en extrayant des articles et en les organisant par catégories. Cela permet aux entreprises de rester informées des dernières tendances et développements dans leur domaine, sans avoir à consacrer du temps à la recherche manuelle.
-
 
 ## Fonctionnalités
 
 - Extraction automatique des articles à partir de sites web.
-- Organisation des articles par catégories pour une meilleure gestion.
 - Interface utilisateur interactive pour visualiser et filtrer les articles.
 - Export des données en CSV et Excel pour une analyse ultérieure.
+- Organisation des articles par catégories pour une meilleure gestion.
+<img src="https://github.com/user-attachments/assets/c3bf4b60-1183-41f2-b435-19caeee35b6e" width=50% height=50%>
+
 
 ## Architecture du Projet
 
+<img src="https://github.com/user-attachments/assets/c2bb2252-e1b8-4a67-9715-d7d7dfc52fe2" width=45% height=50%>
+
 ### Étape 1: Sélection du Site et Configuration des Locateurs
 
-- **Sélection du site** : Vous avez un lien vers le site et un lien vers le dernier article posté.
+- **Sélection du site** : Sélectionner le site à scraper
 - **Agent LeChat** : Cet agent va parcourir la page pour déterminer les locateurs utiles.
   - **Locateurs à récupérer** :
     - Titre
@@ -69,8 +67,9 @@ SmartData Tracker vise à automatiser le processus de veille sur des sites web, 
 ### Étape 3: Sauvegarder les Informations dans un Excel
 
 - **Sauvegarde** : Les informations récupérées seront sauvegardées dans un fichier Excel.
+- **Version actuelle** : export en format csv
 
-### Étape 4: Ajout de Tags aux Catégories
+### Étape 4: Ajout de Tags aux Catégories (TO DO)
 
 - **Agent LeChat** : L'agent va déterminer et ajouter des tags à la colonne "category" pour spécifier le thème.
   - **Liste des Thèmes** : Une liste des thèmes sera enrichie au fur et à mesure pour utiliser le même vocabulaire et mieux organiser les données.
@@ -79,7 +78,7 @@ SmartData Tracker vise à automatiser le processus de veille sur des sites web, 
     tags, main_category, date
     ```
 
-### Étape 5: Extraction des Nouveaux Articles
+### Étape 5: Extraction des Nouveaux Articles (TO DO)
 
 - **Script Python** : Ce script va extraire les nouveaux articles sur une période donnée (semaine ou mois).
   - **Input** : Même configuration que précédementt
@@ -95,7 +94,7 @@ SmartData Tracker vise à automatiser le processus de veille sur des sites web, 
   - Un bouton pour lancer l'extraction.
   - Un aperçu des données avant la sauvegarde.
 
-- **Interface de Visualisation** :
+- **Interface de Visualisation** (TO DO):
   - Une table pour afficher les articles avec des filtres multiples par catégories.
   - Des boutons pour des actions rapides (par exemple, sauvegarde sur Excel).
 

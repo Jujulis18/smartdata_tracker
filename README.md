@@ -22,7 +22,10 @@ SmartData Tracker vise à automatiser le processus de veille sur des sites web, 
 - Interface utilisateur interactive pour visualiser et filtrer les articles.
 - Export des données en CSV et Excel pour une analyse ultérieure.
 - Organisation des articles par catégories pour une meilleure gestion.
+
+[Interface Streamlit](https://smartdatatracker-jvmys59gtfqwup9eetytlt.streamlit.app/)
 <img src="https://github.com/user-attachments/assets/c3bf4b60-1183-41f2-b435-19caeee35b6e" width=50% height=50%>
+
 
 
 ## Architecture du Projet

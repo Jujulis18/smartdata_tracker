@@ -455,16 +455,6 @@ with st.sidebar:
     3. **Suivez** les logs en temps réel
     4. **Téléchargez** le fichier CSV final
     
-    ⚠️ **Prérequis:**
-    ```bash
-    py -3.11 -m venv venv311
-    venv311/Scripts/activate.bat
-    python --version
-    python -m pip install --upgrade pip
-    pip install streamlit playwright
-    playwright install
-    streamlit run app.py
-    ```
-    """)
+   
     
    

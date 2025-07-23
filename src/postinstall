@@ -1,3 +1,4 @@
 #!/bin/bash
-echo "Installing Playwright browsers..."
-playwright install chromium
+echo "🎯 Script postinstall lancé !"
+playwright install --with-deps chromium
+echo "✅ Playwright installé avec les dépendances !"

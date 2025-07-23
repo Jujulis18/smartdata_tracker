@@ -24,7 +24,10 @@ SmartData Tracker vise à automatiser le processus de veille sur des sites web, 
 - Organisation des articles par catégories pour une meilleure gestion.
 
 [Interface Streamlit](https://smartdatatracker-jvmys59gtfqwup9eetytlt.streamlit.app/)
+(Problème de dépendance, veillez suivre le guide de démarrage)
+
 <img src="https://github.com/user-attachments/assets/c3bf4b60-1183-41f2-b435-19caeee35b6e" width=50% height=50%>
+
 
 
 
@@ -101,4 +104,20 @@ SmartData Tracker vise à automatiser le processus de veille sur des sites web, 
   - Une table pour afficher les articles avec des filtres multiples par catégories.
   - Des boutons pour des actions rapides (par exemple, sauvegarde sur Excel).
 
+---
 
+## 🚀 Comment démarrer
+
+1. Clonez le dépôt :  
+
+2. Installez les dépendances :  
+```bash
+pip install -r requirements.txt
+```
+3. Lancez le dashboard :
+
+```bash
+streamlit run app.py
+```
+
+---

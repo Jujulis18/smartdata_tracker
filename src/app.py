@@ -1,16 +1,37 @@
+import json
 import sys
 import asyncio
 
 if sys.platform == "win32":
     asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
 
+import os
+import subprocess
+
+if not os.path.exists(os.path.expanduser("~/.cache/ms-playwright")):
+    subprocess.run(["playwright", "install", "--with-deps"], check=False)
+
 import streamlit as st
 import pandas as pd
-import time
 from datetime import datetime
-from io import StringIO
-import logging
 
+from scripts.locatorDetector import locatorDetection
+from scripts.apiSheet import export_to_google_sheet
+from scripts.scraperRealtime import generate_csv_data, scrape_website_sync, progress_callback, log_callback, add_log
+
+if 'SCRAPER_CONFIG' not in st.session_state:
+    st.session_state['SCRAPER_CONFIG'] = {}
+
+# --- Sidebar ---
+st.sidebar.header("🔑 Google Sheets")
+api_key_input = st.sidebar.text_area("Clé JSON du compte de service Google Cloud", height=200)
+
+# Sauvegarde dans le cache Streamlit
+if api_key_input:
+    st.session_state["google_api_key"] = api_key_input
+    st.sidebar.success("✅ Clé enregistrée en mémoire de session")
+
+# --- Page ---
 st.set_page_config(
     page_title="Web Scraper Pro",
     page_icon="🕷️",
@@ -40,259 +61,40 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# Configuration du scraper
-SCRAPER_CONFIG = {
-    "url": "https://www.therapixel.fr/blog/",
-    "locator_title": "h3 > a",
-    "locator_description": ".entry-content > p",
-    "locator_date": ".entry-date",
-    "locator_link": ".entry-image > a",
-    "locator_next_page": ".pagination .page-next",
-    "category": "medical"
-}
-
-# Configuration du scraper
+# --- Configuration du scraper ---
 st.markdown("### ⚙️ Configuration du Scraper")
 
 col1, col2 = st.columns(2)
 
 with col1:
-    form = st.form('my_animal')
+    mode = st.radio("Source de l'URL :", ["📋 Liste Google Sheets", "🖊️ Entrer manuellement"])
+    form = st.form("scraper_form")
     
-    url = form.text_input('URL cible:', SCRAPER_CONFIG['url'])
-    sentence = form.text_input('Catégorie:', SCRAPER_CONFIG['category'])
-    submit = form.form_submit_button('Get locators ->')
+    # prendre les liens depuis mistral_cache.json
+    with open("mistral_cache.json", "r") as f:
+        mistral_cache = json.load(f)
+    urls = list(mistral_cache.keys())
+    if mode == "📋 Liste Google Sheets" and urls:
+        url = form.selectbox("Choisir une URL :", urls)
+    else:
+        url = form.text_input("URL cible :", "")
+        category = form.text_input("Catégorie :", "")
+    submit = form.form_submit_button("🔎 Get locators →")
 
-    st.markdown("### 🎯 Locators utilisés")
-    st.code(f"""
-    Titre: {SCRAPER_CONFIG['locator_title']}
-    Description: {SCRAPER_CONFIG['locator_description']}
-    Date: {SCRAPER_CONFIG['locator_date']}
-    Pagination: {SCRAPER_CONFIG['locator_next_page']}
-    """, language="css")
+    if submit and url:
+        with st.spinner("Détection des locators en cours..."):
+            st.session_state.SCRAPER_CONFIG = locatorDetection(url)
+        st.success("✅ Locators détectés !")
+        st.markdown("### 🎯 Locators utilisés :")
+        st.json(st.session_state.SCRAPER_CONFIG)
+    elif submit and not url:
+        st.warning("⚠️ Merci d’entrer ou de sélectionner une URL.")
+            
 
 with col2:
+    st.subheader("Scrapper parameters:")
     max_pages = st.number_input("Pages max", value=10, min_value=1, max_value=50)
     delay_seconds = st.number_input("Délai entre pages (s)", value=5, min_value=1, max_value=10)
-
-def add_log(message, log_type="info"):
-    st.session_state.scraping_logs.append({
-        "message": message,
-        "type": log_type
-    })
-
-def scrape_website_sync(max_pages, delay, progress_callback=None, log_callback=None):
-    """
-    Fonction de scraping synchrone utilisant Playwright
-    """
-    try:
-        from playwright.sync_api import sync_playwright
-    except ImportError:
-        if log_callback:
-            log_callback("❌ Playwright non installé. Installez avec: pip install playwright", "error")
-            log_callback("📋 Puis exécutez: playwright install", "info")
-        return {"articles": [], "total_pages": 0, "total_articles": 0}
-    
-    articles = []
-    current_page = 1
-    
-    with sync_playwright() as p:
-        if log_callback:
-            log_callback("🚀 Démarrage du navigateur...", "info")
-        
-        browser = p.chromium.launch(headless=True)
-        page = browser.new_page()
-        
-        try:
-            if log_callback:
-                log_callback(f"🌐 Navigation vers {SCRAPER_CONFIG['url']}", "info")
-            
-            page.goto(SCRAPER_CONFIG['url'])
-            
-            has_more = True
-            previous_first_title = ""
-            previous_url = page.url
-            
-            while has_more and current_page <= max_pages:
-                if log_callback:
-                    log_callback(f"📄 Scraping de la page {current_page}...", "info")
-                
-                # Attendre que les articles se chargent
-                try:
-                    page.wait_for_selector(SCRAPER_CONFIG['locator_title'], timeout=10000)
-                except Exception as e:
-                    if log_callback:
-                        log_callback(f"⚠️ Timeout en attendant les articles: {str(e)}", "warning")
-                    break
-                
-                # Extraire les articles de la page courante
-                page_articles = extract_articles_from_page_sync(page, SCRAPER_CONFIG, log_callback)
-                
-                articles.extend(page_articles)
-                
-                if log_callback:
-                    log_callback(f"✅ Page {current_page} terminée - {len(page_articles)} articles trouvés", "success")
-                
-                if progress_callback:
-                    progress_callback(current_page, len(articles))
-                
-                # Stocker le premier titre pour détecter les changements
-                if page_articles:
-                    previous_first_title = page_articles[0].get('title', '')
-                
-                previous_url = page.url
-                
-                # Tenter de cliquer sur la page suivante
-                has_more = click_next_page_sync(page, SCRAPER_CONFIG['locator_next_page'], 
-                                              previous_first_title, previous_url, log_callback)
-                
-                if has_more:
-                    current_page += 1
-                    time.sleep(delay)
-                else:
-                    if log_callback:
-                        log_callback("🏁 Plus de pages à scraper", "info")
-        
-        except Exception as e:
-            if log_callback:
-                log_callback(f"❌ Erreur pendant le scraping: {str(e)}", "error")
-        
-        finally:
-            browser.close()
-    
-    if log_callback:
-        log_callback(f"🎉 Scraping terminé: {len(articles)} articles sur {current_page} pages", "success")
-    
-    return {
-        "articles": articles,
-        "total_pages": current_page,
-        "total_articles": len(articles)
-    }
-
-def extract_articles_from_page_sync(page, config, log_callback=None):
-    """
-    Extraire les articles de la page courante (version synchrone)
-    """
-    articles = []
-    
-    try:
-        # Récupérer tous les titres
-        title_elements = page.query_selector_all(config['locator_title'])
-        
-        # Récupérer les descriptions
-        description_elements = page.query_selector_all(config['locator_description'])
-        descriptions = []
-        for desc_el in description_elements:
-            desc_text = desc_el.text_content()
-            descriptions.append(desc_text.strip() if desc_text else '')
-        
-        # Récupérer les dates
-        date_elements = page.query_selector_all(config['locator_date'])
-        dates = []
-        for date_el in date_elements:
-            date_text = date_el.text_content()
-            dates.append(date_text.strip() if date_text else '')
-        
-        # Traiter chaque article
-        for i, title_el in enumerate(title_elements):
-            try:
-                title = title_el.text_content()
-                href = title_el.get_attribute('href')
-                
-                if not title or not title.strip():
-                    continue
-                
-                # Construire l'URL complète
-                if href:
-                    link = href
-                else:
-                    link = ''
-                
-                # Récupérer description et date si disponibles
-                description = descriptions[i] if i < len(descriptions) else ''
-                date = dates[i] if i < len(dates) else ''
-                
-                article = {
-                    'title': title.strip(),
-                    'description': description,
-                    'url': link,
-                    'date': date,
-                    'category': config['category']
-                }
-                
-                articles.append(article)
-                
-            except Exception as e:
-                if log_callback:
-                    log_callback(f"⚠️ Erreur lors de l'extraction d'un article: {str(e)}", "warning")
-                continue
-    
-    except Exception as e:
-        if log_callback:
-            log_callback(f"❌ Erreur lors de l'extraction des articles: {str(e)}", "error")
-    
-    return articles
-
-def click_next_page_sync(page, selector, previous_first_title, previous_url, log_callback=None):
-    """
-    Cliquer sur le bouton page suivante et vérifier le changement (version synchrone)
-    """
-    try:
-        next_btn = page.locator(selector)
-        count = next_btn.count()
-        
-        if count == 0:
-            return False
-        
-        is_visible = next_btn.is_visible()
-        is_enabled = next_btn.is_enabled()
-        
-        if not (is_visible and is_enabled):
-            return False
-        
-        if log_callback:
-            log_callback("👆 Clic sur page suivante...", "info")
-        
-        next_btn.click()
-        
-        # Méthode 1: Attendre le changement d'URL
-        try:
-            page.wait_for_function(
-                f"window.location.href !== '{previous_url}'",
-                timeout=3000
-            )
-            return True
-        except:
-            pass
-        
-        # Méthode 2: Attendre le changement du premier titre
-        try:
-            escaped_title = previous_first_title.replace("'", "\\'")
-            page.wait_for_function(
-                f"""
-                () => {{
-                    const el = document.querySelector('{SCRAPER_CONFIG["locator_title"]}');
-                    const newTitle = el ? el.textContent.trim() : null;
-                    return newTitle && newTitle !== '{escaped_title}';
-                }}
-                """,
-                timeout=3000
-            )
-            return True
-        except:
-            if log_callback:
-                log_callback("⏳ Aucun changement détecté après le clic", "warning")
-            return False
-    
-    except Exception as e:
-        if log_callback:
-            log_callback(f"❌ Erreur lors du clic sur page suivante: {str(e)}", "error")
-        return False
-
-def generate_csv_data(articles):
-    """Générer les données CSV"""
-    df = pd.DataFrame(articles)
-    return df.to_csv(index=False)
 
 # Section des contrôles
 st.markdown("### 🎮 Contrôles")
@@ -307,14 +109,25 @@ with col1:
         st.rerun()
 
 with col2:
+
     if st.session_state.scraping_results and not st.session_state.is_scraping:
         csv_data = generate_csv_data(st.session_state.articles_data)
+
         st.download_button(
             label="📥 Télécharger CSV",
             data=csv_data,
             file_name=f"articles_scraped_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
             mime="text/csv"
         )
+
+        if "google_api_key" in st.session_state:
+            if st.button("📤 Exporter vers Google Sheets"):
+                sheet_url = export_to_google_sheet(st.session_state.articles_data)
+                if sheet_url:
+                    st.success(f"✅ Export réussi ! [Ouvrir le Google Sheet]({sheet_url})")
+        else:
+            st.info("➡️ Ajoutez d’abord votre clé API Google dans la sidebar pour activer l’export Sheets.")
+
 
 # Processus de scraping
 if st.session_state.is_scraping:
@@ -335,31 +148,12 @@ if st.session_state.is_scraping:
     progress_bar = st.progress(0)
     status_text = st.empty()
     
-    # Callbacks pour mise à jour en temps réel
-    def progress_callback(current_page, total_articles):
-        progress = current_page / max_pages
-        progress_bar.progress(progress)
-        status_text.text(f"Page {current_page}/{max_pages} - {total_articles} articles trouvés")
-        
-        # Afficher les articles dans le conteneur
-        if st.session_state.articles_data:
-            with articles_container:
-                df_preview = pd.DataFrame(st.session_state.articles_data[-5:])  # Derniers 5 articles
-                st.dataframe(df_preview[['title', 'date']], use_container_width=True)
-    
-    def log_callback(message, log_type):
-        add_log(message, log_type)
-        # Afficher les logs en temps réel
-        with log_container:
-            for log in st.session_state.scraping_logs[-10:]:  # Derniers 10 logs
-                st.markdown(f"""
-                <div class="log-{log['type']}"> {log['message']}</div>
-                """, unsafe_allow_html=True)
+
     
     try:
         add_log("🚀 Initialisation du scraping...", "info")
-        
-        results = scrape_website_sync(max_pages, delay_seconds, progress_callback, log_callback)
+        # pourquoi SCRAPER_CONFIG n'est pas utilisé. remis par default?
+        results = scrape_website_sync(max_pages, delay_seconds, progress_callback, log_callback, progress_bar, status_text, articles_container, log_container)
         
         st.session_state.scraping_results = results
         st.session_state.articles_data = results['articles']
@@ -371,7 +165,6 @@ if st.session_state.is_scraping:
         st.session_state.is_scraping = False
         progress_bar.progress(1.0)
         status_text.text("Scraping terminé!")
-        time.sleep(2)
         st.rerun()
 
 # Affichage des résultats
@@ -432,17 +225,7 @@ if st.session_state.scraping_logs:
 
 # Sidebar avec informations
 with st.sidebar:
-    st.markdown("### 📋 Configuration actuelle")
-    st.info(f"""
-    **URL:** {SCRAPER_CONFIG['url']}
-    
-    **Pages max:** {max_pages}
-    
-    **Délai:** {delay_seconds}s
-    
-    **Catégorie:** {SCRAPER_CONFIG['category']}
-    """)
-    
+   
     if st.session_state.scraping_results:
         st.markdown("### 📊 Statistiques")
         st.success(f"**Pages scrapées:** {st.session_state.scraping_results['total_pages']}")

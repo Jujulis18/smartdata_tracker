@@ -5,3 +5,8 @@ seaborn
 numpy
 matplotlib
 playwright
+mistralai>=0.1.0
+python-dotenv
+
+gspread 
+google-auth

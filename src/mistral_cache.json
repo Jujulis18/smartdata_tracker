@@ -1,0 +1,49 @@
+{
+  "https://www.therapixel.fr/blog/": {
+    "url": "https://www.therapixel.fr/blog/",
+    "locator_title": "h3.t-entry-title a",
+    "locator_description": ".t-entry-excerpt p",
+    "locator_date": ".t-entry-date",
+    "locator_link": ".t-entry-visual a",
+    "locator_next_page": ".page-next a",
+    "category": "medical"
+  },
+  "https://dust.tt/blog": { 
+    "url":"https://dust.tt/blog",
+    "locator_title":".col-span-12.pt-4.grid.gap-8.sm\\:grid-cols-2.lg\\:grid-cols-3 h3.text-xl",
+    "locator_description":".col-span-12.pt-4.grid.gap-8.sm\\:grid-cols-2.lg\\:grid-cols-3 p.text-base",
+    "locator_date":".col-span-12.pt-4.grid.gap-8.sm\\:grid-cols-2.lg\\:grid-cols-3 span.text-sm",
+    "locator_link": "a.href",
+    "locator_next_page":"nav[aria-label='Pagination'] a[aria-disabled='false']:has(svg):last-of-type",
+    "category":"ai"
+  },
+  "https://www.mistral.ai/news?category=solutions": {
+  "url": "https://www.mistral.ai/news?category=solutions",
+  "locator_title": "article h2",
+  "locator_description": "article p.text-gray-600",
+  "locator_date": "article div.flex.flex-col.gap-3 div.flex.items-center div.px-3.text-center:first-of-type",
+  "locator_link": "article a[href='/news/']",  
+  "locator_next_page": "button:not([disabled]):has(svg[viewBox='0 0 18 14'])",  
+  "category": "ai"
+},
+  "https://www.mistral.ai/news": {
+  "url": "https://mistral.ai/news",
+  "locator_title": "article h2",
+  "locator_description": "article p.text-gray-600",
+  "locator_date": "article div.flex.flex-col.gap-3 div.flex.items-center div.px-3.text-center:first-of-type",
+  "locator_link": "article a[href='/news/']",  
+  "locator_next_page": "button:not([disabled]):has(svg[viewBox='0 0 18 14'])",  
+  "category": "ai"
+}, 
+ "https://www.glean.com/blog": {
+  "url": "https://www.glean.com/blog",
+  "locator_title": "article h3 a",
+  "locator_description": "article p",
+  "locator_date": "article time",
+  "locator_link": "article h3 a",
+  "locator_next_page": "a[rel=\"next\"]",
+  "category": "ai"
+}
+
+
+}
